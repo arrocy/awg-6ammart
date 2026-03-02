@@ -1,4 +1,23 @@
-# 6amMart-awgCloud-mod
+# NEW Release (Available Soon...)! Version-Agnostic.
+Compatible with multiple versions of 6amMart.
+Please report compatibility with v2.9 and below!
+# Warning!
+If you have installed old version of 6amMart Modification from me before, please remove the modifications or overwrite the 5 modified files with 6amMart original files.
+If you don't, you will send double notifications.
+# Installation
+1. Upload and extract the zip file on to 6amMart root folder.
+2. You will see 'AwgCloud' folder created inside /Module folder.
+3. Login as admin to 6amMart.
+4. Go to System Management Settings -> Addon Activation -> Awg Cloud
+5. If you see AWG Cloud [Installed : Not Activated], please refresh the page!
+6. Click View -> enter AWG Cloud Token -> enter Test phone number -> click Send Test Message button.
+7. Send Test Message -> OK -> click Slider/Checkbox to enable the module.
+8. SAVE!
+# How to use
+Settings for OTP and Order Notifications are integrated with 6amMart Business Management Settings.
+# Below is tutorial for older version, will be removed when new release is up and ready.
+=========================================================================
+# 6amMart-awgCloud-mod (OLD VERSION)
 Modification files to 6amMart for adding whatsapp notifications and Whatsapp OTP
 # PLEASE BACKUP THESE 5 ORIGINAL FILES
 1. /app/CentralLogics/Helpers.php
