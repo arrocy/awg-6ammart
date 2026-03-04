@@ -1,0 +1,9 @@
+{
+    "name": "AwgCloud",
+    "alias": "awgcloud",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": ["Modules\\AwgCloud\\Providers\\AwgCloudServiceProvider"],
+    "files": []
+}

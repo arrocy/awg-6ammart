@@ -1,0 +1,28 @@
+{
+    "name": "nwidart/awgcloud",
+    "description": "",
+    "authors": [
+        {
+            "name": "Nicolas Widart",
+            "email": "n.widart@gmail.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "aliases": {}
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\AwgCloud\\": "app/",
+            "Modules\\AwgCloud\\Database\\Factories\\": "database/factories/",
+            "Modules\\AwgCloud\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\AwgCloud\\Tests\\": "tests/"
+        }
+    }
+}
