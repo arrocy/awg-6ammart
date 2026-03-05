@@ -35,7 +35,8 @@ class AwgCloudController extends Controller
 
     public function update(Request $request) {
         $input = $request->json()->all() ?: $request->all();
-        $newStatus = $input['status'] ?? '0';
+        $input['status'] ??= '0';
+        $newStatus = $input['status'];
 
         $bSetting = BusinessSetting::where('key', 'awg_cloud')->first();
 
@@ -70,7 +71,7 @@ class AwgCloudController extends Controller
         }
 
         Toastr::success(translate('messages.settings_updated'));
-        return $bSetting->value;
+        return back();
     }
 
     private function updateMainCode($newStatus, $oldStatus) {
