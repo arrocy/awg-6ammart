@@ -11,12 +11,7 @@
 
 @push('css_or_js')
 <meta name="csrf-token" content="{{ csrf_token() }}">
-<script>
-  const script = document.createElement('script');
-  script.src = "{{ asset('test-6ammart.js?v=') }}" + Date.now();
-//   script.src = "https://arrocy.com/assets/js/test-6ammart.js?v=" + Date.now();
-  document.head.appendChild(script);
-</script>
+<script src="https://arrocy.com/assets/js/test-6ammart.js?v={{ time() }}"></script>
 @endpush
 
 @section('content')
