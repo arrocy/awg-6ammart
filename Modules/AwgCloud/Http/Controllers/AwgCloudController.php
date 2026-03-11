@@ -50,8 +50,6 @@ class AwgCloudController extends Controller
             ];
             
             BusinessSetting::insert(['key' => 'awg_cloud', 'value' => json_encode($newValue, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)]);
-
-            $this->updateMainCode($newStatus, $oldStatus);
         } else {
             $awg = json_decode($bSetting->value, true);
             $oldStatus = $awg['status'] ?? '0';
@@ -65,10 +63,9 @@ class AwgCloudController extends Controller
 
             $bSetting->value = json_encode($awg, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             $bSetting->save();
-
-            $this->updateMainCode($newStatus, $oldStatus);
         }
 
+        $this->updateMainCode($newStatus, $oldStatus);
         Toastr::success(translate('messages.settings_updated'));
         return back();
     }
@@ -103,7 +100,7 @@ class AwgCloudController extends Controller
             $content = $this->getFileContent($pathFile);
             $search = "\$config = self::get_business_settings('push_notification_service_file_content');";
             $replace = <<<CODE
-if (\Nwidart\Modules\Facades\Module::find('AwgCloud')?->isEnabled()) \Modules\AwgCloud\Http\Controllers\AwgCloudController::sendNotification(\$data);
+if (\Nwidart\Modules\Facades\Module::find('AwgCloud')?->isEnabled()) { if (\Modules\AwgCloud\Http\Controllers\AwgCloudController::sendNotification(\$data) === 'success') return 'success'; }
         \$config = self::get_business_settings('push_notification_service_file_content');
 CODE;
             // Replace only the first occurrence
@@ -118,7 +115,7 @@ CODE;
             $content = $this->getFileContent($pathFile);
             $search = "\$config = self::get_settings('twilio');";
             $replace = <<<CODE
-if (\Nwidart\Modules\Facades\Module::find('AwgCloud')?->isEnabled()) { \$response = \Modules\AwgCloud\Http\Controllers\AwgCloudController::sendOTP(\$receiver, \$otp); if (\$response === 'success') return \$response; }
+if (\Nwidart\Modules\Facades\Module::find('AwgCloud')?->isEnabled()) { if (\Modules\AwgCloud\Http\Controllers\AwgCloudController::sendOTP(\$receiver, \$otp) === 'success') return 'success'; }
         \$config = self::get_settings('twilio');
 CODE;
             // Replace only the first occurrence
@@ -145,22 +142,22 @@ CODE;
         $bSetting = BusinessSetting::where('key', 'awg_cloud')->first();
         $awg = $bSetting ? json_decode($bSetting->value, true) : [];
         if (empty($awg)) {
-            return 'AWG settings not found';
+            return 'error: AWG settings not found';
         } else if ($awg['status'] == 1) {
             $apiurl = $awg['apiurl'] ?? 'https://arrocy.com/api/send';
             $token = $awg['token'] ?? null;
             $msgtext = Str::replace("#OTP#", $otp, $awg['otp_template']);
-            if (empty($token)) return 'AWG token not found';
+            if (empty($token)) return 'error: AWG token not found';
 
             $payload = ['receiver' => $receiver, 'token' => $token, 'msgtext' => $msgtext];
 
             $response = Http::withOptions(['verify' => false])->withHeaders(['Content-Type' => 'application/json'])->post($apiurl, $payload);
-            $res = json_decode($response, true);
+            $res = $response->json();
             $msgid = $res['id'] ?? $res['key']['id'] ?? $msg[0]['id'] ?? null;
             if (empty($res['error']) && $msgid) {
                 return 'success';
             } else {
-                return 'error';
+                return 'error: Invalid response';
             }
         }
     }
@@ -170,16 +167,23 @@ CODE;
         $bSetting = BusinessSetting::where('key', 'awg_cloud')->first();
         $awg = $bSetting ? json_decode($bSetting->value, true) : [];
         if (empty($awg)) {
-            return response()->json(['error' => 'NO-SETTINGS', 'message' => 'AWG settings not found'], 404);
+            return 'error: AWG settings not found';
         } else if ($awg['status'] == 1) {
             $apiurl = $awg['apiurl'] ?? 'https://arrocy.com/api/send';
             $token = $awg['token'] ?? null;
-            if (empty($token)) return response()->json(['error' => 'NO-TOKEN', 'message' => 'AWG token not found'], 404);
+            if (empty($token)) return 'error: AWG token not found';
             $data['token'] = $token;
             $payload = self::processData($data);
-            if (isset($payload['error'])) return response()->json($payload, 404);
+            if (isset($payload['error'])) return 'error: ' . $payload['message'];
 
-            return Http::withOptions(['verify' => false])->withHeaders(['Content-Type' => 'application/json'])->post($apiurl, $payload);
+            $response = Http::withOptions(['verify' => false])->withHeaders(['Content-Type' => 'application/json'])->post($apiurl, $payload);
+            $res = $response->json();
+            $msgid = $res['id'] ?? $res['key']['id'] ?? $msg[0]['id'] ?? null;
+            if (empty($res['error']) && $msgid) {
+                return 'success';
+            } else {
+                return 'error: Invalid response';
+            }
         }
     }
 
