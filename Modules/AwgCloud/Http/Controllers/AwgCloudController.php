@@ -174,7 +174,7 @@ CODE;
             if (empty($token)) return 'error: AWG token not found';
             $data['token'] = $token;
             $payload = self::processData($data);
-            if (isset($payload['error'])) return 'error: ' . $payload['message'];
+            if (isset($payload['error'])) return 'error: ' . $payload['error'];
 
             $response = Http::withOptions(['verify' => false])->withHeaders(['Content-Type' => 'application/json'])->post($apiurl, $payload);
             $res = $response->json();
@@ -198,33 +198,33 @@ CODE;
         if (isset($msg_topic)) {
             if ($msg_topic === 'admin_message') {
                 $admin_phone = Admin::first()->phone;
-                if (empty($admin_phone)) return ['error' => 'ADMIN-PHONE-NOT-FOUND', 'message' => 'Admin phone number not found'];
+                if (empty($admin_phone)) return ['error' => 'Admin phone number not found'];
                 $payload['receiver'] = $admin_phone;
             } else if (Str::startsWith($msg_topic, 'store_panel_')) {
                 $store_id = (int) Str::after($msg_topic, 'store_panel_');
                 $store_phone = Store::find($store_id)->phone ?? null;
-                if (empty($store_phone)) return ['error' => 'STORE-PHONE-NOT-FOUND', 'message' => 'Store phone number not found'];
+                if (empty($store_phone)) return ['error' => 'Store phone number not found'];
                 $payload['receiver'] = 'store_' . $store_id;
             } else if (Str::startsWith($msg_topic, 'restaurant_dm_')) {
                 $store_id = (int) Str::after($msg_topic, 'restaurant_dm_');
                 $store_phone = Store::find($store_id)->phone ?? null;
-                if (empty($store_phone)) return ['error' => 'STORE-PHONE-NOT-FOUND', 'message' => 'Store phone number not found'];
+                if (empty($store_phone)) return ['error' => 'Store phone number not found'];
                 $payload['receiver'] = 'store_' . $store_id;
             } else if (Str::startsWith($msg_topic, 'delivery_man_')) {
                 $zone_id = (int) Str::after($msg_topic, 'delivery_man_');
                 $delivery_men = DeliveryMan::where('zone_id', $zone_id)->get();
-                if ($delivery_men->count() == 0) return ['error' => 'DELIVERY-MAN-NOT-FOUND', 'message' => 'No delivery man found for the specified zone'];
+                if ($delivery_men->count() == 0) return ['error' => 'No delivery man found for the specified zone'];
                 $delivery_men_phones = $delivery_men->pluck('phone')->filter()->toArray();
                 $payload['receiver'] = implode(',', $delivery_men_phones);
             } else {
-                return ['error' => 'INVALID-TOPIC', 'message' => 'Invalid message topic'];
+                return ['error' => 'Invalid message topic'];
             }
         } else if (isset($msg_token)) {
             $user = User::where('cm_firebase_token', $msg_token)->first();
-            if (empty($user)) return ['error' => 'USER-NOT-FOUND', 'message' => 'User not found for the provided token'];
+            if (empty($user)) return ['error' => 'User not found for the provided token'];
             $payload['receiver'] = $user->phone;
         } else {
-            return ['error' => 'NO-RECEIVER', 'message' => 'No receiver information found in the message'];
+            return ['error' => 'No receiver information found in the message'];
         }
 
         $title = $msg_data['title'] ? "*{$msg_data['title']}*" . "\n" : '';
