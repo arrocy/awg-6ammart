@@ -36,6 +36,11 @@ If you don't, you will send double notifications.
 
 Settings for OTP and Order Notifications are integrated with 6amMart Business Management Settings.
 
+# Known issues
+
+- After 6amMart update: re-upload /resources/views/admin-views/addon-activation/index.blade.php
+- After AWG Cloud Module update: Go to Addon Activation page -> Disable module and then Enable module again.
+
 # Upgrade from old modification (v2.9-V3.5) to New Module
 
 Please replace 5 modified files with original files
