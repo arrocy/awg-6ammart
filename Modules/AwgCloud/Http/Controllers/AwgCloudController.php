@@ -74,55 +74,153 @@ class AwgCloudController extends Controller
         if ($newStatus == $oldStatus) return;
 
         if ($newStatus == '0') {
-            $this->removeAwgCode();
+            $this->delAwgCode();
         } else if ($newStatus == '1') {
             $this->addAwgCode();
         }
     }
 
-    private function removeAwgCode() {
-        $pathFiles = [app_path('Traits/NotificationTrait.php'), app_path('CentralLogics/Helpers.php'), app_path('CentralLogics/SMS_module.php'), app_path('Traits/SmsGateway.php')];
-        foreach ($pathFiles as $pathFile) {
-            $content = $this->getFileContent($pathFile);
-            $lines = explode("\n", $content);
-            $needle = "AwgCloud";
-            $filtered = array_filter($lines, function ($line) use ($needle) {
-                return !Str::contains($line, $needle);
-            });
-            $newFileString = implode("\n", $filtered);
-            File::put($pathFile, $newFileString);
+    private function delAwgCode() {
+        $pathFiles = [
+            app_path('Traits/NotificationTrait.php'),
+            app_path('CentralLogics/Helpers.php'),
+            app_path('CentralLogics/SMS_module.php'),
+            app_path('Traits/SmsGateway.php'),
+        ];
+
+        foreach ($pathFiles as $path) {
+            $content = File::get($path);
+            $lines   = explode("\n", $content);
+            $result  = [];
+
+            for ($i = count($lines) - 1; $i >= 0; $i--) {
+                $line = $lines[$i];
+
+                if (Str::contains($line, 'ARROCY_MOD_DO_NOT_EDIT')) {
+                    $currentLine = trim($line);
+
+                    // Case 1: closing curly brace - find matching opening using a balance counter
+                    if (Str::startsWith($currentLine, '}')) {
+                        $balance = 0;
+                        $foundJ  = null;
+                        for ($j = $i; $j >= 0; $j--) {
+                            $l = $lines[$j];
+                            $balance += substr_count($l, '}');
+                            $balance -= substr_count($l, '{');
+                            if ($balance === 0 && strpos($l, '{') !== false) {
+                                $foundJ = $j;
+                                break;
+                            }
+                        }
+                        if ($foundJ !== null) {
+                            // move index to the opening line; loop's $i-- will continue before it
+                            $i = $foundJ;
+                        }
+                        // skip the marker/closing line itself
+                        continue;
+                    }
+
+                    // Case 2: closing </div> - balance nested divs
+                    if (Str::startsWith($currentLine, '</div>')) {
+                        $balance = 0;
+                        $foundJ  = null;
+                        for ($j = $i; $j >= 0; $j--) {
+                            $l = strtolower($lines[$j]);
+                            $balance += substr_count($l, '</div>');
+                            $balance -= substr_count($l, '<div');
+                            if ($balance === 0 && strpos($l, '<div') !== false) {
+                                $foundJ = $j;
+                                break;
+                            }
+                        }
+                        if ($foundJ !== null) {
+                            $i = $foundJ;
+                        }
+                        continue;
+                    }
+
+                    // Case 3: closing </script> - balance nested scripts (rare, but handled)
+                    if (Str::startsWith($currentLine, '</script>')) {
+                        $balance = 0;
+                        $foundJ  = null;
+                        for ($j = $i; $j >= 0; $j--) {
+                            $l = strtolower($lines[$j]);
+                            $balance += substr_count($l, '</script>');
+                            $balance -= substr_count($l, '<script');
+                            if ($balance === 0 && strpos($l, '<script') !== false) {
+                                $foundJ = $j;
+                                break;
+                            }
+                        }
+                        if ($foundJ !== null) {
+                            $i = $foundJ;
+                        }
+                        continue;
+                    }
+                    continue;
+                }
+                $result[] = $line;
+            }
+            // we collected lines in reverse order, restore correct order
+            $result = array_reverse($result);
+
+            // Rebuild file string
+            $newFileString = implode("\n", $result);
+            File::put($path, $newFileString);
         }
     }
 
     private function addAwgCode() {
         $pathFiles = [app_path('Traits/NotificationTrait.php'), app_path('CentralLogics/Helpers.php')];
-        foreach ($pathFiles as $pathFile) {
-            $content = $this->getFileContent($pathFile);
-            $search = "\$config = self::get_business_settings('push_notification_service_file_content');";
-            $replace = <<<CODE
-if (\Nwidart\Modules\Facades\Module::find('AwgCloud')?->isEnabled()) { if (\Modules\AwgCloud\Http\Controllers\AwgCloudController::sendNotification(\$data) === 'success') return 'success'; }
+        foreach ($pathFiles as $path) {
+            $content = $this->getFileContent($path);
+            $searches = ['$config = self::get_business_settings(\'push_notification_service_file_content\');'];
+            $replaces = [
+<<<CODE
+if (\Nwidart\Modules\Facades\Module::find('AwgCloud')?->isEnabled()) { if (\Modules\AwgCloud\Http\Controllers\AwgCloudController::sendNotification(\$data) === 'success') return 'success'; } // ARROCY_MOD_DO_NOT_EDIT
         \$config = self::get_business_settings('push_notification_service_file_content');
-CODE;
-            // Replace only the first occurrence
-            if (!Str::contains($content, $replace)) {
-                $newFileString = preg_replace('/' . preg_quote($search, '/') . '/', $replace, $content, 1);
-                File::put($pathFile, $newFileString);
+CODE,
+            ];
+
+            $newFileString = $content;
+            foreach ($searches as $i => $search) {
+                if (!Str::contains($newFileString, $replaces[$i])) {
+                    $newFileString = preg_replace(
+                        '/' . preg_quote($search, '/') . '/',
+                        $replaces[$i],
+                        $newFileString,
+                        1
+                    );
+                }
             }
+
+            File::put($path, $newFileString);
         }
 
-        $pathSmsModules = [app_path('CentralLogics/SMS_module.php'), app_path('Traits/SmsGateway.php')];
-        foreach ($pathSmsModules as $pathFile) {
-            $content = $this->getFileContent($pathFile);
-            $search = "\$config = self::get_settings('twilio');";
-            $replace = <<<CODE
-if (\Nwidart\Modules\Facades\Module::find('AwgCloud')?->isEnabled()) { if (\Modules\AwgCloud\Http\Controllers\AwgCloudController::sendOTP(\$receiver, \$otp) === 'success') return 'success'; }
+        $pathFiles = [app_path('CentralLogics/SMS_module.php'), app_path('Traits/SmsGateway.php')];
+        foreach ($pathFiles as $path) {
+            $content = $this->getFileContent($path);
+            $searches = ['$config = self::get_settings(\'twilio\');'];
+            $replaces = [
+<<<CODE
+if (\Nwidart\Modules\Facades\Module::find('AwgCloud')?->isEnabled()) { if (\Modules\AwgCloud\Http\Controllers\AwgCloudController::sendOTP(\$receiver, \$otp) === 'success') return 'success'; } // ARROCY_MOD_DO_NOT_EDIT
         \$config = self::get_settings('twilio');
-CODE;
-            // Replace only the first occurrence
-            if (!Str::contains($content, $replace)) {
-                $newFileString = preg_replace('/' . preg_quote($search, '/') . '/', $replace, $content, 1);
-                File::put($pathFile, $newFileString);
+CODE,
+            ];
+
+            $newFileString = $content;
+            foreach ($searches as $i => $search) {
+                if (!Str::contains($newFileString, $replaces[$i])) {
+                    $newFileString = preg_replace(
+                        '/' . preg_quote($search, '/') . '/',
+                        $replaces[$i],
+                        $newFileString,
+                        1
+                    );
+                }
             }
+
+            File::put($path, $newFileString);
         }
     }
 
