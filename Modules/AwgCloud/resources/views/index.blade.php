@@ -93,7 +93,7 @@
                             <div class="col-md-6 col-lg-6">
                                 <div class="row g-3">
                                     <div class="col-md-6">
-                                        <label class="mb-2 d-flex align-items-center gap-1 fz--14px">Phone With Country Code</label>
+                                        <label class="mb-2 d-flex align-items-center gap-1 fz--14px">TEST PHONE NUMBER</label>
                                         <input type="text" value="{{ $awg['test_number'] ?? '' }}"
                                             placeholder="6281234567890" title="Phone number to receive test message"
                                             id="test_number" name="test_number" class="form-control">
