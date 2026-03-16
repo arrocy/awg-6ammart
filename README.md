@@ -24,7 +24,7 @@ If you don't, you will send double notifications.
 # Installation
 
 1. Upload and extract the zip file on to 6amMart root folder.
-2. You will see 'AwgCloud' folder created inside /Module folder.
+2. You will see 'AwgCloud' folder created inside /Modules folder.
 3. Login as admin to 6amMart.
 4. Go to System Management Settings -> Addon Activation -> Awg Cloud
 5. If you see AWG Cloud [Module Installed : Module Not Activated], please refresh the page!
