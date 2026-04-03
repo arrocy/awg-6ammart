@@ -81,14 +81,14 @@ class AwgCloudController extends Controller
     }
 
     private function delAwgCode() {
-        $pathFiles = [
+        $filePaths = [
             app_path('Traits/NotificationTrait.php'),
             app_path('CentralLogics/Helpers.php'),
             app_path('CentralLogics/SMS_module.php'),
             app_path('Traits/SmsGateway.php'),
         ];
 
-        foreach ($pathFiles as $path) {
+        foreach ($filePaths as $path) {
             $content = File::get($path);
             $lines   = explode("\n", $content);
             $result  = [];
@@ -99,7 +99,6 @@ class AwgCloudController extends Controller
                 if (Str::contains($line, 'ARROCY_MOD_DO_NOT_EDIT')) {
                     $currentLine = trim($line);
 
-                    // Case 1: closing curly brace - find matching opening using a balance counter
                     if (Str::startsWith($currentLine, '}')) {
                         $balance = 0;
                         $foundJ  = null;
@@ -120,7 +119,6 @@ class AwgCloudController extends Controller
                         continue;
                     }
 
-                    // Case 2: closing </div> - balance nested divs
                     if (Str::startsWith($currentLine, '</div>')) {
                         $balance = 0;
                         $foundJ  = null;
@@ -139,7 +137,6 @@ class AwgCloudController extends Controller
                         continue;
                     }
 
-                    // Case 3: closing </script> - balance nested scripts (rare, but handled)
                     if (Str::startsWith($currentLine, '</script>')) {
                         $balance = 0;
                         $foundJ  = null;
@@ -171,56 +168,34 @@ class AwgCloudController extends Controller
     }
 
     private function addAwgCode() {
-        $pathFiles = [app_path('Traits/NotificationTrait.php'), app_path('CentralLogics/Helpers.php')];
-        foreach ($pathFiles as $path) {
-            $content = $this->getFileContent($path);
-            $searches = ['$config = self::get_business_settings(\'push_notification_service_file_content\');'];
-            $replaces = [
-<<<CODE
-if (\Nwidart\Modules\Facades\Module::find('AwgCloud')?->isEnabled()) { if (\Modules\AwgCloud\Http\Controllers\AwgCloudController::sendNotification(\$data) === 'success') return 'success'; } // ARROCY_MOD_DO_NOT_EDIT
-        \$config = self::get_business_settings('push_notification_service_file_content');
-CODE,
-            ];
+        $filePaths = [
+            [
+                'files'     => [app_path('Traits/NotificationTrait.php'), app_path('CentralLogics/Helpers.php')],
+                'searches'  => ['$config = self::get_business_settings(\'push_notification_service_file_content\');'],
+                'replaces'  => [base64_decode('aWYgKFxOd2lkYXJ0XE1vZHVsZXNcRmFjYWRlc1xNb2R1bGU6OmZpbmQoJ0F3Z0Nsb3VkJyk/LT5pc0VuYWJsZWQoKSkgeyBpZiAoXE1vZHVsZXNcQXdnQ2xvdWRcSHR0cFxDb250cm9sbGVyc1xBd2dDbG91ZENvbnRyb2xsZXI6OnNlbmROb3RpZmljYXRpb24oJGRhdGEpID09PSAnc3VjY2VzcycpIHJldHVybiAnc3VjY2Vzcyc7IH0gLy8gQVJST0NZX01PRF9ET19OT1RfRURJVAogICAgICAgICRjb25maWcgPSBzZWxmOjpnZXRfYnVzaW5lc3Nfc2V0dGluZ3MoJ3B1c2hfbm90aWZpY2F0aW9uX3NlcnZpY2VfZmlsZV9jb250ZW50Jyk7')],
+            ],
+            [
+                'files'     => [app_path('CentralLogics/SMS_module.php'), app_path('Traits/SmsGateway.php')],
+                'searches'  => ['$config = self::get_settings(\'twilio\');'],
+                'replaces'  => [base64_decode('aWYgKFxOd2lkYXJ0XE1vZHVsZXNcRmFjYWRlc1xNb2R1bGU6OmZpbmQoJ0F3Z0Nsb3VkJyk/LT5pc0VuYWJsZWQoKSkgeyBpZiAoXE1vZHVsZXNcQXdnQ2xvdWRcSHR0cFxDb250cm9sbGVyc1xBd2dDbG91ZENvbnRyb2xsZXI6OnNlbmRPVFAoJHJlY2VpdmVyLCAkb3RwKSA9PT0gJ3N1Y2Nlc3MnKSByZXR1cm4gJ3N1Y2Nlc3MnOyB9IC8vIEFSUk9DWV9NT0RfRE9fTk9UX0VESVQKICAgICAgICAkY29uZmlnID0gc2VsZjo6Z2V0X3NldHRpbmdzKCd0d2lsaW8nKTs=')],
+            ],
+        ];
 
-            $newFileString = $content;
-            foreach ($searches as $i => $search) {
-                if (!Str::contains($newFileString, $replaces[$i])) {
-                    $newFileString = preg_replace(
-                        '/' . preg_quote($search, '/') . '/',
-                        $replaces[$i],
-                        $newFileString,
-                        1
-                    );
+        foreach ($filePaths as $path) {
+            foreach ($path['files'] as $file) {
+                $content = $this->getFileContent($file);
+                foreach ($path['searches'] as $i => $search) {
+                    if (!Str::contains($content, $path['replaces'][$i])) {
+                        $content = preg_replace(
+                            '/' . preg_quote($search, '/') . '/',
+                            $path['replaces'][$i],
+                            $content,
+                            1
+                        );
+                    }
                 }
+                File::put($file, $content);
             }
-
-            File::put($path, $newFileString);
-        }
-
-        $pathFiles = [app_path('CentralLogics/SMS_module.php'), app_path('Traits/SmsGateway.php')];
-        foreach ($pathFiles as $path) {
-            $content = $this->getFileContent($path);
-            $searches = ['$config = self::get_settings(\'twilio\');'];
-            $replaces = [
-<<<CODE
-if (\Nwidart\Modules\Facades\Module::find('AwgCloud')?->isEnabled()) { if (\Modules\AwgCloud\Http\Controllers\AwgCloudController::sendOTP(\$receiver, \$otp) === 'success') return 'success'; } // ARROCY_MOD_DO_NOT_EDIT
-        \$config = self::get_settings('twilio');
-CODE,
-            ];
-
-            $newFileString = $content;
-            foreach ($searches as $i => $search) {
-                if (!Str::contains($newFileString, $replaces[$i])) {
-                    $newFileString = preg_replace(
-                        '/' . preg_quote($search, '/') . '/',
-                        $replaces[$i],
-                        $newFileString,
-                        1
-                    );
-                }
-            }
-
-            File::put($path, $newFileString);
         }
     }
 
@@ -232,7 +207,6 @@ CODE,
                 $path = Str::replace(['Helpers.php','SMS_module.php'], $filename, $path);
             }
         }
-
         return File::get($path);
     }
 
